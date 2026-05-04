@@ -1,38 +1,56 @@
-# Terraform on Microsoft Azure — 2‑Day Hands‑On Training (Repo)
+# Terraform on Azure – Hands-on Labs
 
-This repository is aligned with the course slides (**Terraform_na_Microsoft_Azure.pptx**). 
+This repository contains practical, hands-on labs for learning Terraform on Microsoft Azure.
 
-## Layout
-- `day1/` — foundations + first resources + remote state
-- `day2/` — advanced + modular mini‑project
-- `labs/` — LAB 1–7 step‑by‑step instructions (participant handout)
-- `live-coding/` — live coding scripts (what you type + checkpoints)
-- `trainer-notes.md` — instructor notes to avoid “slides only” delivery
+It is designed for beginners and intermediate users who want to build real-world Infrastructure as Code (IaC) skills using Terraform.
 
-## Prerequisites
-- Terraform: `terraform -version`
-- Azure CLI: `az version`
-- Login: `az login`
+## 🚀 What you will learn
 
-## Quick start
-### Day 1
-```bash
-cd day1/infra
-terraform fmt -recursive
-terraform validate
-terraform init
-terraform plan -var-file=env/staging.tfvars
-terraform apply -var-file=env/staging.tfvars
-```
+- Terraform fundamentals (providers, resources, variables, outputs)
+- Working with Azure resources using Terraform
+- Structuring Terraform projects
+- Using modules and reusable components
+- Managing state and environments
+- Best practices for IaC and cloud deployments
 
-### Day 2
-```bash
-cd day2/infra
-terraform fmt -recursive
-terraform init
-terraform validate
-terraform plan -var-file=env/dev.tfvars -out=tfplan
-terraform apply tfplan
-```
+## 🧪 Labs
 
-> Remote state setup is in **LAB 2** (`labs/LAB2_remote_state.md`).
+The repository is organized into labs that gradually increase in complexity:
+
+- Day 1 – Basics (init, plan, apply, simple resources)
+- Day 2 – Project structure and modules
+- Day 3 – Validation, variables, and best practices
+- Day 4+ – Advanced scenarios (optional extensions)
+
+Each lab includes:
+- Step-by-step instructions
+- Example code
+- Tasks to complete
+- Expected outcomes
+
+## 🎯 Who is this for?
+
+- DevOps Engineers
+- Cloud Engineers
+- Beginners learning Terraform
+- Anyone preparing for real-world Azure + Terraform usage
+
+## 🛠 Requirements
+
+- Azure subscription
+- Terraform installed
+- Azure CLI
+- Basic command line knowledge
+
+## 💡 Approach
+
+This repository follows a **learning-by-doing** approach:
+you don’t just read Terraform — you actually build infrastructure.
+
+## 🤝 Contributing
+
+Feel free to open issues, suggest improvements, or add new labs.
+
+---
+
+Created as part of practical IT training by Mtrainings.
