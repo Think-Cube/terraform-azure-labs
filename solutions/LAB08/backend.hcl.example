@@ -1,0 +1,4 @@
+resource_group_name  = "rg-jk-tfstate"
+storage_account_name = "stjktfstate1234"
+container_name       = "tfstate"
+key                  = "greengrid/dev.tfstate"

@@ -1,9 +1,0 @@
-# Copy to backend.tf after creating backend resources (LAB 2)
-terraform {
-  backend "azurerm" {
-    resource_group_name  = "rg-tfstate"
-    storage_account_name = "PASTE_BACKEND_STORAGE_NAME"
-    container_name       = "tfstate"
-    key                  = "tftrain/staging.tfstate"
-  }
-}

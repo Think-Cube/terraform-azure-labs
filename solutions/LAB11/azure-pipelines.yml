@@ -1,0 +1,84 @@
+# GreenGrid infrastructure pipeline - Azure DevOps with workload identity federation (no secrets)
+# Service connection "greengrid-azure": Azure Resource Manager, workload identity federation.
+# Environment "dev": add an approval check - it gates the apply stage.
+trigger:
+  branches:
+    include: [main]
+
+pr:
+  branches:
+    include: [main]
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  TF_VERSION: 1.17.1
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "false"
+
+stages:
+  - stage: plan
+    jobs:
+      - job: plan
+        steps:
+          - checkout: self
+
+          - script: |
+              curl -fsSLo tf.zip https://releases.hashicorp.com/terraform/$(TF_VERSION)/terraform_$(TF_VERSION)_linux_amd64.zip
+              sudo unzip -o tf.zip terraform -d /usr/local/bin && terraform version
+            displayName: Install Terraform
+
+          - task: AzureCLI@2
+            displayName: fmt, validate, test, plan
+            inputs:
+              azureSubscription: greengrid-azure
+              scriptType: bash
+              scriptLocation: inlineScript
+              addSpnToEnvironment: true          # exposes servicePrincipalId, tenantId and idToken
+              inlineScript: |
+                export ARM_CLIENT_ID=$servicePrincipalId ARM_TENANT_ID=$tenantId
+                export ARM_SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+                export ARM_USE_OIDC=true ARM_OIDC_TOKEN=$idToken
+                terraform fmt -check -recursive
+                terraform init -backend-config=backend.hcl
+                terraform validate
+                terraform test
+                terraform plan -var-file=env/dev.tfvars -out=tfplan
+
+          - publish: tfplan
+            artifact: tfplan
+
+  - stage: apply
+    dependsOn: plan
+    condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'), ne(variables['Build.Reason'], 'PullRequest'))
+    jobs:
+      - deployment: apply
+        environment: dev                       # approval check
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - checkout: self
+
+                - download: current
+                  artifact: tfplan
+
+                - script: |
+                    curl -fsSLo tf.zip https://releases.hashicorp.com/terraform/$(TF_VERSION)/terraform_$(TF_VERSION)_linux_amd64.zip
+                    sudo unzip -o tf.zip terraform -d /usr/local/bin
+                  displayName: Install Terraform
+
+                - task: AzureCLI@2
+                  displayName: Apply the reviewed plan
+                  inputs:
+                    azureSubscription: greengrid-azure
+                    scriptType: bash
+                    scriptLocation: inlineScript
+                    addSpnToEnvironment: true
+                    inlineScript: |
+                      export ARM_CLIENT_ID=$servicePrincipalId ARM_TENANT_ID=$tenantId
+                      export ARM_SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+                      export ARM_USE_OIDC=true ARM_OIDC_TOKEN=$idToken
+                      terraform init -backend-config=backend.hcl
+                      terraform apply $(Pipeline.Workspace)/tfplan/tfplan

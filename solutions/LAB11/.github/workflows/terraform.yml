@@ -1,0 +1,81 @@
+# GreenGrid infrastructure pipeline - GitHub Actions with OIDC (no secrets stored in GitHub)
+#   pull request -> fmt, validate, test, plan (plan is shown in the run summary)
+#   push to main -> plan, then apply after approval in the "dev" environment
+name: terraform
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  id-token: write        # request the OIDC token for Azure
+  contents: read
+
+env:
+  ARM_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+  ARM_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
+  ARM_SUBSCRIPTION_ID: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+  ARM_USE_OIDC: "true"   # azurerm, azapi and the azurerm backend log in with the GitHub token
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "false"
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: 1.17.1
+          terraform_wrapper: false
+
+      - name: Format
+        run: terraform fmt -check -recursive
+
+      - name: Init
+        run: terraform init -backend-config=backend.hcl
+
+      - name: Validate
+        run: terraform validate
+
+      - name: Unit tests (mocked providers)
+        run: terraform test
+
+      - name: Plan
+        run: |
+          terraform plan -var-file=env/dev.tfvars -out=tfplan
+          terraform show -no-color tfplan > plan.txt
+          { echo '### Terraform plan'; echo '```'; tail -n 40 plan.txt; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: tfplan
+          path: tfplan
+          retention-days: 5
+
+  apply:
+    needs: plan
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    environment: dev       # required reviewers = approval gate
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: 1.17.1
+          terraform_wrapper: false
+
+      - name: Init
+        run: terraform init -backend-config=backend.hcl
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: tfplan
+
+      - name: Apply the reviewed plan
+        run: terraform apply tfplan

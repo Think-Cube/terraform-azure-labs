@@ -1,14 +1,11 @@
-# Terraform
+work/
 .terraform/
 *.tfstate
 *.tfstate.*
+*.tfvars.json
+tfplan
+plan.txt
 crash.log
-crash.*.log
-*.tfplan
-.terraform.lock.hcl
-
-# OS/editor
-.DS_Store
-Thumbs.db
-.vscode/
-.idea/
+override.tf
+override.tf.json
+backend.hcl
