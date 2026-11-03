@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+# Bring work/greengrid to the end state of lab N - keeps your state, backend.hcl and .terraform.
+#   ./bin/catchup 5
+set -euo pipefail
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+n=$(printf '%02d' "${1:?lab number}")
+src="$ROOT/solutions/LAB$n"; dst="$ROOT/work/greengrid"
+[[ -d $src ]] || { echo "no solution for LAB$n"; exit 1; }
+mkdir -p "$dst"
+# keep your own prefix
+prefix=$(grep -hoE '^prefix *= *"[a-z0-9]+"' "$dst"/env/dev.tfvars "$dst"/terraform.tfvars 2>/dev/null | head -1 | sed -E 's/.*"(.*)"/\1/' || true)
+find "$dst" -maxdepth 1 -name '*.tf' -exec rm -f {} +
+cp -r "$src/." "$dst/"
+if [[ -n ${prefix:-} ]]; then
+  find "$dst" -name '*.tfvars' -exec sed -i -E "s/^prefix( *)= *\"[a-z0-9]+\"/prefix\1= \"$prefix\"/" {} +
+fi
+echo "work/greengrid is now at the end of LAB$n${prefix:+ (prefix: $prefix)}"
+echo "next: cd work/greengrid && terraform init -upgrade$([[ -f $dst/backend.hcl ]] && echo ' -backend-config=backend.hcl')"
